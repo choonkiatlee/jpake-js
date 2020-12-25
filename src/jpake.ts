@@ -1,5 +1,4 @@
 import * as secp from "noble-secp256k1";
-import * as sparkMD5 from 'spark-md5'
 import {randBetween, asPad64HexString, mod, SHA256Hash} from './utils'
 
 // see: https://billatnapier.medium.com/password-juggling-in-discrete-logs-and-elliptic-curves-a82d5926d26d

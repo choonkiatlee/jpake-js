@@ -1,24 +1,23 @@
 {
   "name": "jpake",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "This library allows 2 parties to generate a mutual secret key using a weak key that is known to each other beforehand using Password Authenticated Key Exchange by Juggling (J-PAKE) based on elliptic curves. ",
+  "main": "dist/jpake.node.js",
+  "module": "dist/jpake.js",
   "scripts": {
     "build": "npm link webpack && npm link typescript && npm link ts-loader && webpack --config webpack.dev.js",
     "buildprod": "npm link webpack && npm link typescript && npm link ts-loader && webpack --config webpack.prod.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "choonkiatlee",
+  "license": "MIT",
   "dependencies": {
     "@types/crypto-js": "^4.0.1",
     "crypto-js": "^4.0.0",
-    "noble-secp256k1": "^1.1.1",
-    "spark-md5": "^3.0.1"
+    "noble-secp256k1": "^1.1.1"
   },
   "devDependencies": {
     "@types/node": "^14.14.16",
-    "@types/spark-md5": "^3.0.2",
     "webpack-merge": "^5.7.3"
   }
 }

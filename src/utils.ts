@@ -1,4 +1,3 @@
-import * as secp from 'noble-secp256k1'
 import sha256  from 'crypto-js/sha256'
 
 
