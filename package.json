@@ -11,6 +11,11 @@
   },
   "author": "choonkiatlee",
   "license": "MIT",
+  "homepage": "https://github.com/owner/project#readme",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/choonkiatlee/jpake-js.git"
+  },
   "dependencies": {
     "@types/crypto-js": "^4.0.1",
     "crypto-js": "^4.0.0",

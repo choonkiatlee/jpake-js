@@ -79,3 +79,44 @@ export function SHA256Hash(toHash: string): string {
     var hash = sha256(toHash).toString()
     return hash
 }
+
+export function asBase64String( x: bigint ): string {
+    return BigIntBase64.fromInt(x)
+}
+
+export function fromBase64String(str: string): bigint {
+    return BigIntBase64.toInt(str)
+}
+
+
+export const BigIntBase64 = (function () {
+    var digitsStr = 
+    //   0       8       16      24      32      40      48      56     63
+    //   v       v       v       v       v       v       v       v      v
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
+    var digits = digitsStr.split('');
+    var digitsMap: {[digit: string]: bigint} = {};
+    for (var i = 0; i < digits.length; i++) {
+        digitsMap[digits[i]] = BigInt(i);
+    }
+    return {
+        fromInt: function(int32: bigint) {
+            var result = '';
+            while (true) {
+                result = digits[Number(int32 & 0x3fn)] + result; // this is safe because of the bitshifting
+                int32 >>= 6n; // Only good for us with unsigned integers? this should break for signed integers.
+                if (int32 === 0n)
+                    break;
+            }
+            return result;
+        },
+        toInt: function(digitsStr: string) {
+            var result = 0n;
+            var digits = digitsStr.split('');
+            for (var i = 0; i < digits.length; i++) {
+                result = (result << 6n) + digitsMap[digits[i]];
+            }
+            return result;
+        }
+    };
+})();
