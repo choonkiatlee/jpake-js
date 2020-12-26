@@ -1,5 +1,5 @@
 import * as secp from "noble-secp256k1";
-import {randBetween, asBase64String, mod, SHA256Hash, fromBase64String} from './utils'
+import {randBetween, asBase64String, mod, SHA256Hash, fromBase64String, BigIntBase64} from './utils'
 
 // see: https://billatnapier.medium.com/password-juggling-in-discrete-logs-and-elliptic-curves-a82d5926d26d
 // https://asecuritysite.com/encryption/jpake2
@@ -28,21 +28,29 @@ export class JPake {
     x2s: bigint
     otherx1G: secp.Point
     otherx2G: secp.Point
-    otherV: secp.Point
     G: secp.Point
     hashFn: (str: string) => string
 
     constructor(secret: string, hashFn: (str: string) => string = SHA256Hash) { 
         this.hashFn = hashFn
 
+        // Compute a simple hash of our secret
         this.s = mod( BigInt("0x" + this.hashFn(secret)), secp.CURVE.n )
+
         this.x1 = randBetween(0n, secp.CURVE.n - 1n)
         this.x2 = randBetween(0n, secp.CURVE.n - 1n)
 
         const G = new secp.Point(secp.CURVE.Gx, secp.CURVE.Gy );
-        this.G = G
-        this.x1G = G.multiply(this.x1)
-        this.x2G = G.multiply(this.x2)              
+        this.G = G         
+    }
+
+    setState(x1: bigint, x2: bigint) {
+        this.x1 = x1
+        this.x2 = x2
+    }
+
+    test1(x: bigint): string {
+        return asBase64String(x)
     }
 
     // ZKP checks not implemented into protocol yet.
@@ -57,7 +65,7 @@ export class JPake {
         const v = randBetween(0n, secp.CURVE.n - 1n)
         const t = Generator.multiply(v)
 
-        // 2. Compute c = H(g, y, t) where H() is a cryptographic has fn
+        // 2. Compute c = H(g, y, t) where H() is a cryptographic hash fn
         y = y.equals(ZEROPOINT) ? Generator.multiply(x) : y
         const chal = asBase64String(Generator.x) + asBase64String(Generator.y) + asBase64String(t.x) + asBase64String(t.y) + asBase64String(y.x) + asBase64String(y.y)
         const c = BigInt("0x"+this.hashFn(chal))
@@ -79,6 +87,7 @@ export class JPake {
 
     checkZKP(tx: bigint, ty: bigint, r: bigint, G: secp.Point, y: secp.Point): boolean {
         const chal = asBase64String(G.x) + asBase64String(G.y) + asBase64String(tx) + asBase64String(ty) + asBase64String(y.x) + asBase64String(y.y)
+        
         const c = BigInt("0x" + this.hashFn(chal))
 
         var Vcheck = G.multiply(r).add(y.multiply(c))
@@ -96,7 +105,11 @@ export class JPake {
         return Vcheck.equals(new secp.Point(tx, ty))
     }
 
-    Round1Message(): string{
+    GetRound1Message(): string{
+
+        this.x1G = this.G.multiply(this.x1)
+        this.x2G = this.G.multiply(this.x2) 
+
         var pubVar = {
             x1Gx: asBase64String(this.x1G.x),
             x1Gy: asBase64String(this.x1G.y),
@@ -109,7 +122,7 @@ export class JPake {
         return JSON.stringify(pubVar);
     }
 
-    Round2Message(jsonStringFromB: string): string{
+    GetRound2Message(jsonStringFromB: string): string{
         // In Round 1, we receive x1G and x2G from Bob, and possibly knowledge proofs for x1 and x2
         const otherPubVars = JSON.parse(jsonStringFromB)
         const otherx1G = new secp.Point(fromBase64String(otherPubVars.x1Gx), fromBase64String(otherPubVars.x1Gy)) // also x3G and x4G from Bob if you are following the paper
@@ -132,6 +145,10 @@ export class JPake {
         const Generator = this.x1G.add(otherx1G).add(otherx2G) // As per the RFC, the 2nd round generator is G1 + G3 + G4 in the EC setting
         const A = Generator.multiply(this.x2s)
 
+        const B = Generator.multiply(this.x2).multiply(this.s)
+
+        console.log(A, B, A.equals(B))
+
         return JSON.stringify({
             Ax: asBase64String(A.x),
             Ay: asBase64String(A.y),
@@ -140,7 +157,7 @@ export class JPake {
         })
     }
 
-    computeSharedKey(jsonStringFromB: string) : string {
+    ComputeSharedKey(jsonStringFromB: string) : string {
         const otherA = JSON.parse(jsonStringFromB)
         const B = new secp.Point(fromBase64String(otherA.Ax), fromBase64String(otherA.Ay))
         
@@ -156,3 +173,6 @@ export class JPake {
         return sharedKey
     }
 }
+
+
+export const base64 = BigIntBase64
