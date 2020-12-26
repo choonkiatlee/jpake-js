@@ -13,6 +13,13 @@ type ZKPMsg = {
     c: string,
 }
 
+const JPAKESTATEENUM = Object.freeze({
+    JPAKESTATE_INITIALISED: 0,
+	JPAKESTATE_WAITFORROUND1MSG: 1,
+	JPAKESTATE_WAITFORROUND2MSG: 2, 
+	JPAKESTATE_KEYCOMPUTED: 3,
+})
+
 export class JPake {
     
     // Private Variables
@@ -30,6 +37,7 @@ export class JPake {
     otherx2G: secp.Point
     G: secp.Point
     hashFn: (str: string) => string
+    state: number
 
     constructor(secret: string, hashFn: (str: string) => string = SHA256Hash) { 
         this.hashFn = hashFn
@@ -41,16 +49,14 @@ export class JPake {
         this.x2 = randBetween(0n, secp.CURVE.n - 1n)
 
         const G = new secp.Point(secp.CURVE.Gx, secp.CURVE.Gy );
-        this.G = G         
+        this.G = G 
+        
+        this.state = JPAKESTATEENUM.JPAKESTATE_INITIALISED
     }
 
-    setState(x1: bigint, x2: bigint) {
+    setRandomState(x1: bigint, x2: bigint) {
         this.x1 = x1
         this.x2 = x2
-    }
-
-    test1(x: bigint): string {
-        return asBase64String(x)
     }
 
     // ZKP checks not implemented into protocol yet.
@@ -107,6 +113,10 @@ export class JPake {
 
     GetRound1Message(): string{
 
+        if (this.state != JPAKESTATEENUM.JPAKESTATE_INITIALISED) {
+            throw "Wrong state!"
+        }
+
         this.x1G = this.G.multiply(this.x1)
         this.x2G = this.G.multiply(this.x2) 
 
@@ -119,10 +129,16 @@ export class JPake {
             x1ZKP: this.computeZKP(this.x1, this.G, this.x1G),
             x2ZKP: this.computeZKP(this.x2, this.G, this.x2G),
         }
+
+        this.state = JPAKESTATEENUM.JPAKESTATE_WAITFORROUND1MSG
         return JSON.stringify(pubVar);
     }
 
     GetRound2Message(jsonStringFromB: string): string{
+        if (this.state != JPAKESTATEENUM.JPAKESTATE_WAITFORROUND1MSG) {
+            throw "Wrong state!"
+        }
+        
         // In Round 1, we receive x1G and x2G from Bob, and possibly knowledge proofs for x1 and x2
         const otherPubVars = JSON.parse(jsonStringFromB)
         const otherx1G = new secp.Point(fromBase64String(otherPubVars.x1Gx), fromBase64String(otherPubVars.x1Gy)) // also x3G and x4G from Bob if you are following the paper
@@ -145,10 +161,7 @@ export class JPake {
         const Generator = this.x1G.add(otherx1G).add(otherx2G) // As per the RFC, the 2nd round generator is G1 + G3 + G4 in the EC setting
         const A = Generator.multiply(this.x2s)
 
-        const B = Generator.multiply(this.x2).multiply(this.s)
-
-        console.log(A, B, A.equals(B))
-
+        this.state = JPAKESTATEENUM.JPAKESTATE_WAITFORROUND2MSG
         return JSON.stringify({
             Ax: asBase64String(A.x),
             Ay: asBase64String(A.y),
@@ -158,6 +171,11 @@ export class JPake {
     }
 
     ComputeSharedKey(jsonStringFromB: string) : string {
+
+        if( this.state != JPAKESTATEENUM.JPAKESTATE_WAITFORROUND2MSG) {
+            throw "Wrong state!"
+        }
+
         const otherA = JSON.parse(jsonStringFromB)
         const B = new secp.Point(fromBase64String(otherA.Ax), fromBase64String(otherA.Ay))
         
@@ -170,6 +188,8 @@ export class JPake {
         // Ka = (B - (G4 x [x2*s])) x [x2]
         const Ka = B.subtract(this.otherx2G.multiply(this.x2s)).multiply(this.x2)
         const sharedKey = this.hashFn(asBase64String(Ka.x))
+
+        this.state = JPAKESTATEENUM.JPAKESTATE_KEYCOMPUTED
         return sharedKey
     }
 }
