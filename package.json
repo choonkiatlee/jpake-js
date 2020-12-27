@@ -16,6 +16,17 @@
     "type" : "git",
     "url" : "https://github.com/choonkiatlee/jpake-js.git"
   },
+  "keywords": [
+    "JPAKE",
+    "j-pake",
+    "password",
+    "augmented",
+    "key",
+    "exchange",
+    "cryptography",
+    "elliptic",
+    "curves"
+  ],
   "dependencies": {
     "@types/crypto-js": "^4.0.1",
     "crypto-js": "^4.0.0",
