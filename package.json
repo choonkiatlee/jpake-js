@@ -1,6 +1,6 @@
 {
   "name": "jpake",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This library allows 2 parties to generate a mutual secret key using a weak key that is known to each other beforehand using Password Authenticated Key Exchange by Juggling (J-PAKE) based on elliptic curves. ",
   "main": "dist/jpake.node.js",
   "module": "dist/jpake.js",
